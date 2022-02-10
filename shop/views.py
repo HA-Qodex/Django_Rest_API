@@ -63,15 +63,25 @@ class CartView(APIView):
                 cart_product_obj_serializer = CartProductSerializer(cart_product_obj, many=True)
                 cart['cartProducts'] = cart_product_obj_serializer.data
                 data.append(cart)
-            response_message = {"error": False, "data": data}
+            response_message = {
+                "success": True,
+                "message": "",
+                "data": data,
+                "error": "",
+                "error_code": 200}
         except:
-            response_message = {"error": False, "data": "No Data"}
+            response_message = {
+                "success": False,
+                "message": "Something wrong...",
+                "data": "",
+                "error": "",
+                "error_code": 400}
         return Response(response_message)
 
 
 class OrderView(APIView):
-    permission_classes = [IsAuthenticated,]
-    authentication_classes = [TokenAuthentication,]
+    permission_classes = [IsAuthenticated, ]
+    authentication_classes = [TokenAuthentication, ]
 
     def get(self, request):
         try:
@@ -81,3 +91,78 @@ class OrderView(APIView):
         except:
             response_message = {"error": True, "data": "No Data"}
         return Response(response_message)
+
+
+class AddToCartView(APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [TokenAuthentication]
+
+    def post(self, request):
+        product_id = request.data["id"]
+        product_obj = Product.objects.get(id=product_id)
+        cart = Cart.objects.filter(user=request.user).filter(isComplete=False).first()
+        cart_product_obj = CartProduct.objects.filter(product__id=product_id).first()
+
+        try:
+            if cart:
+                this_product_in_cart = cart.cartproduct_set.filter(product=product_obj)
+                if this_product_in_cart.exists():
+                    cart_product_uct = CartProduct.objects.filter(product=product_obj).filter(
+                        cart__isComplete=False).first()
+                    cart_product_uct.quantity += 1
+                    cart_product_uct.subtotal += product_obj.sellPrice
+                    cart_product_uct.save()
+                    cart.total += product_obj.sellPrice
+                    cart.save()
+                else:
+                    cart_product_new = CartProduct.objects.create(
+                        cart=cart,
+                        price=product_obj.sellPrice,
+                        quantity=1,
+                        subtotal=product_obj.sellPrice
+                    )
+                    cart_product_new.product.add(product_obj)
+                    cart.total += product_obj.sellPrice
+                    cart.save()
+            else:
+                Cart.objects.create(user=request.user, total=0, isComplete=False)
+                new_cart = Cart.objects.filter(user=request.user).filter(isComplete=False).first()
+                cart_product_new = CartProduct.objects.create(
+                    cart=new_cart,
+                    price=product_obj.sellPrice,
+                    quantity=1,
+                    subtotal=product_obj.sellPrice
+                )
+                cart_product_new.product.add(product_obj)
+                new_cart.total += product_obj.sellPrice
+                new_cart.save()
+            response_message = {
+                "success": True,
+                "message": "Product added to cart",
+                "data": "",
+                "error": "",
+                "error_code": 200
+            }
+        except:
+            response_message = {
+                "success": False,
+                "message": "Product failed to add in cart",
+                "data": "",
+                "error": "",
+                "error_code": 400
+            }
+        return Response(response_message)
+
+
+class DeleteCartProduct(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        cart_product_id = request.data["id"]
+        try:
+            cart_product_obj = CartProduct.objects.get()
+        print(cart_product_id)
+        return Response()
+
+

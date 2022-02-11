@@ -154,15 +154,98 @@ class AddToCartView(APIView):
         return Response(response_message)
 
 
-class DeleteCartProduct(APIView):
+class DeleteCartProductView(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
         cart_product_id = request.data["id"]
         try:
-            cart_product_obj = CartProduct.objects.get()
-        print(cart_product_id)
-        return Response()
+            cart_product_obj = CartProduct.objects.get(id=cart_product_id)
+            cart = Cart.objects.filter(user=request.user).filter(isComplete=False).first()
+            cart.total -= cart_product_obj.subtotal
+            cart_product_obj.delete()
+            cart.save()
+            response_message = {
+                "success": True,
+                "message": "Product deleted successfully",
+                "data": "",
+                "error": "",
+                "error_code": 200
+            }
+        except:
+            response_message = {
+                "success": False,
+                "message": "Product delete failed",
+                "data": "",
+                "error": "",
+                "error_code": 400
+            }
+        return Response(response_message)
 
 
+class DeleteCartView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+
+        cart_id = request.data["id"]
+        try:
+            cart_obj = Cart.objects.get(id=cart_id)
+            cart_obj.delete()
+            response_message = {
+                "success": True,
+                "message": "Cart has been deleted",
+                "data": "",
+                "error": "",
+                "error_code": 200
+            }
+        except:
+            response_message = {
+                "success": False,
+                "message": "Cart delete failed",
+                "data": "",
+                "error": "",
+                "error_code": 400
+            }
+        return Response(response_message)
+
+
+class CreateOrderView(APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [TokenAuthentication]
+
+    def post(self, request):
+
+        try:
+            data = request.data
+            cart_id = data['cart_id']
+            address = data['address']
+            email = data['email']
+            phone = data['phone']
+            cart_obj = Cart.objects.get(id=cart_id)
+            cart_obj.isComplete = True
+            cart_obj.save()
+            Order.objects.create(
+                cart=cart_obj,
+                email=email,
+                address=address,
+                phone=phone
+            )
+            response_message = {
+                "success": True,
+                "message": "Order has been created successfully",
+                "data": "",
+                "error": "",
+                "error_code": 200
+            }
+        except:
+            response_message = {
+                "success": False,
+                "message": "Order Creation failed",
+                "data": "",
+                "error": "",
+                "error_code": 400
+            }
+        return Response(response_message)

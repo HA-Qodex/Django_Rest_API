@@ -10,5 +10,7 @@ urlpatterns = [
     path('login/', obtain_auth_token),
     path('registration/', RegisterView.as_view()),
     path('addtocart/', AddToCartView.as_view()),
-    path('deleteProduct/', DeleteCartProduct.as_view()),
+    path('deleteProduct/', DeleteCartProductView.as_view()),
+    path('deleteCart/', DeleteCartView.as_view()),
+    path('makeOrder/', CreateOrderView.as_view()),
 ]
